@@ -48,3 +48,29 @@
     {user: principal, campaign-id: uint} 
     {amount: uint, timestamp: uint}
 )
+
+;; Read-only functions
+(define-read-only (get-token-uri (token-id uint))
+    (map-get? token-uri token-id)
+)
+
+(define-read-only (get-owner (token-id uint))
+    (map-get? nft-owners token-id)
+)
+
+(define-read-only (get-price (token-id uint))
+    (map-get? nft-price token-id)
+)
+
+(define-read-only (get-token-metadata (token-id uint))
+    (map-get? nft-metadata token-id)
+)
+
+(define-read-only (get-campaign-details (campaign-id uint))
+    (map-get? charity-campaigns campaign-id)
+)
+
+(define-read-only (get-user-donation-history (user principal) (campaign-id uint))
+    (map-get? user-donations {user: user, campaign-id: campaign-id})
+)
+
