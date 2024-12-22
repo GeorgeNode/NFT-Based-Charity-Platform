@@ -105,3 +105,23 @@
         )
     )
 )
+
+;; Public functions - NFT Trading
+(define-public (transfer (token-id uint) (recipient principal))
+    (let ((owner (unwrap! (map-get? nft-owners token-id) (err u1))))
+        (asserts! (is-eq tx-sender owner) err-not-token-owner)
+        (transfer-token token-id owner recipient)
+    )
+)
+
+(define-public (list-for-sale (token-id uint) (price uint))
+    (let ((owner (unwrap! (map-get? nft-owners token-id) (err u1))))
+        (begin
+            (asserts! (not (var-get paused)) (err u108))
+            (asserts! (is-eq tx-sender owner) err-not-token-owner)
+            (asserts! (> price u0) err-invalid-price)
+            (map-set nft-price token-id price)
+            (ok true)
+        )
+    )
+)
