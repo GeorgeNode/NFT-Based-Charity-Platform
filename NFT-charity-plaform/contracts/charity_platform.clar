@@ -165,3 +165,33 @@
         )
     )
 )
+
+;; Public functions - Marketplace with Charity
+(define-public (buy-nft (token-id uint))
+    (let 
+        (
+            (price (unwrap! (map-get? nft-price token-id) err-invalid-price))
+            (owner (unwrap! (map-get? nft-owners token-id) err-not-token-owner))
+            (donation-amount (/ (* price (var-get donation-percentage)) u100))
+            (seller-amount (- price donation-amount))
+        )
+        (begin
+            (asserts! (not (var-get paused)) err-invalid-price)
+            (asserts! (>= (stx-get-balance tx-sender) price) err-insufficient-funds)
+            
+            ;; Transfer payment to seller
+            (unwrap! (stx-transfer? seller-amount tx-sender owner) err-insufficient-funds)
+            
+            ;; Transfer donation to charity
+            (unwrap! (stx-transfer? donation-amount tx-sender (var-get charity-address)) err-insufficient-funds)
+            
+            ;; Transfer NFT ownership
+            (unwrap! (transfer-token token-id owner tx-sender) err-not-token-owner)
+            
+            ;; Cleanup and update state
+            (map-delete nft-price token-id)
+            (var-set total-donations (+ (var-get total-donations) donation-amount))
+            (ok true)
+        )
+    )
+)
