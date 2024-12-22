@@ -88,3 +88,20 @@
         (ok true)
     )
 )
+
+;; Public functions - NFT Core
+(define-public (mint (uri (string-utf8 256)) (category (string-utf8 64)))
+    (let ((token-id (+ (var-get total-nfts) u1)))
+        (begin
+            (asserts! (not (var-get paused)) (err u108))
+            (map-set nft-owners token-id tx-sender)
+            (map-set token-uri token-id uri)
+            (map-set nft-metadata token-id 
+                {creator: tx-sender,
+                 timestamp: block-height,
+                 category: category})
+            (var-set total-nfts token-id)
+            (ok token-id)
+        )
+    )
+)
