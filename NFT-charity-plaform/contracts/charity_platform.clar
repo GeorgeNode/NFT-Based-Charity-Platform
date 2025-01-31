@@ -376,3 +376,21 @@
         )
     )
 )
+
+;; Public functions - Campaign Analytics
+(define-public (generate-campaign-report
+    (campaign-id uint))
+    (let (
+        (campaign (unwrap! (map-get? charity-campaigns campaign-id) err-campaign-not-found))
+        (campaign-nft-list (default-to (list) (map-get? campaign-nfts campaign-id)))
+        )
+        (ok {
+            name: (get name campaign),
+            total-raised: (get raised campaign),
+            goal-percentage: (/ (* (get raised campaign) u100) (get goal campaign)),
+            total-nfts: (len campaign-nft-list),
+            is-active: (get active campaign),
+            remaining-blocks: (- (get deadline campaign) block-height)
+        })
+    )
+)
