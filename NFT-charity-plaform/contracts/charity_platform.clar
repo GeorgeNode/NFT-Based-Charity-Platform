@@ -43,6 +43,21 @@
 
 (define-data-var campaign-counter uint u0)
 
+;; Additional data maps
+(define-map campaign-nfts uint (list 100 uint))
+(define-map user-campaign-participation 
+    {user: principal, campaign-id: uint}
+    {nfts-donated: (list 100 uint), total-value: uint}
+)
+(define-map campaign-milestones
+    {campaign-id: uint, milestone-id: uint}
+    {description: (string-utf8 256), 
+     target-amount: uint,
+     reached: bool,
+     reward-uri: (string-utf8 256)}
+)
+(define-map user-rewards principal (list 100 uint))
+
 ;; Donation history
 (define-map user-donations 
     {user: principal, campaign-id: uint} 
