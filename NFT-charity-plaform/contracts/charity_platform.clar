@@ -326,3 +326,53 @@
         )
     )
 )
+
+(define-public (add-campaign-milestone
+    (campaign-id uint)
+    (milestone-id uint)
+    (description (string-utf8 256))
+    (target-amount uint)
+    (reward-uri (string-utf8 256)))
+    (begin
+        (asserts! (is-eq tx-sender contract-owner) err-owner-only)
+        (asserts! (is-some (map-get? charity-campaigns campaign-id)) err-campaign-not-found)
+        (map-set campaign-milestones
+            {campaign-id: campaign-id, milestone-id: milestone-id}
+            {description: description,
+             target-amount: target-amount,
+             reached: false,
+             reward-uri: reward-uri})
+        (ok true)
+    )
+)
+
+(define-public (check-and-claim-milestone-reward
+    (campaign-id uint)
+    (milestone-id uint))
+    (let (
+        (milestone (unwrap! (map-get? campaign-milestones 
+            {campaign-id: campaign-id, milestone-id: milestone-id}) err-campaign-not-found))
+        (user-participation (unwrap! (map-get? user-campaign-participation
+            {user: tx-sender, campaign-id: campaign-id}) err-campaign-not-found))
+        (current-rewards (default-to (list) (map-get? user-rewards tx-sender)))
+        )
+        (begin
+            (asserts! (not (get reached milestone)) err-invalid-parameter)
+            (asserts! (>= (get total-value user-participation) 
+                         (get target-amount milestone)) err-invalid-parameter)
+            
+            ;; Mint reward NFT
+            (let ((new-token-id (try! (mint (get reward-uri milestone) u"milestone-reward"))))
+                ;; Update milestone status
+                (map-set campaign-milestones
+                    {campaign-id: campaign-id, milestone-id: milestone-id}
+                    (merge milestone {reached: true}))
+                
+                ;; Add to user rewards
+                (map-set user-rewards tx-sender (unwrap! (as-max-len? (append current-rewards new-token-id) u100) err-invalid-parameter))
+                
+                (ok new-token-id)
+            )
+        )
+    )
+)
