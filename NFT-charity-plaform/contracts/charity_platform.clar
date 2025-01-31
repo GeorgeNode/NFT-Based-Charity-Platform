@@ -43,7 +43,6 @@
 
 (define-data-var campaign-counter uint u0)
 
-;; Additional data maps
 (define-map campaign-nfts uint (list 100 uint))
 (define-map user-campaign-participation 
     {user: principal, campaign-id: uint}
@@ -265,6 +264,65 @@
             (map-set charity-campaigns campaign-id
                 (merge campaign {active: false}))
             (ok true)
+        )
+    )
+)
+
+(define-public (donate-nft-to-campaign 
+    (token-id uint)
+    (campaign-id uint))
+    (let (
+        (campaign (unwrap! (map-get? charity-campaigns campaign-id) 
+            (err u104))) ;; err-campaign-not-found
+        (owner (unwrap! (map-get? nft-owners token-id)
+            (err u101))) ;; err-not-token-owner
+        (current-nfts (default-to (list) (map-get? campaign-nfts campaign-id)))
+        (user-stats (default-to 
+            {nfts-donated: (list), total-value: u0}
+            (map-get? user-campaign-participation {user: tx-sender, campaign-id: campaign-id})))
+        )
+        (begin
+            ;; Check campaign is active and not expired
+            (asserts! (get active campaign) 
+                (err u104)) ;; err-campaign-not-found
+            (asserts! (<= block-height (get deadline campaign)) 
+                (err u105)) ;; err-campaign-expired
+            (asserts! (is-eq tx-sender owner)
+                (err u101)) ;; err-not-token-owner
+            (asserts! (not (var-get paused))
+                (err u108)) ;; err-paused
+            ;; Check list size limits
+            (asserts! (< (len current-nfts) u100)
+                (err u107)) ;; err-invalid-parameter
+            (asserts! (< (len (get nfts-donated user-stats)) u100)
+                (err u107)) ;; err-invalid-parameter
+            
+            ;; Get NFT price (if listed) or default to 0
+            (let ((nft-value (default-to u0 (map-get? nft-price token-id))))
+                (begin
+                    ;; Transfer NFT to contract
+                    (try! (transfer token-id contract-owner))
+                    
+                    ;; Update campaign NFT list
+                    (map-set campaign-nfts campaign-id 
+                        (unwrap! (as-max-len? (append current-nfts token-id) u100)
+                            (err u107))) ;; err-invalid-parameter
+                    
+                    ;; Update user participation stats
+                    (map-set user-campaign-participation
+                        {user: tx-sender, campaign-id: campaign-id}
+                        {nfts-donated: (unwrap! 
+                            (as-max-len? (append (get nfts-donated user-stats) token-id) u100)
+                            (err u107)), ;; err-invalid-parameter
+                         total-value: (+ (get total-value user-stats) nft-value)})
+                    
+                    ;; Update campaign raised amount
+                    (map-set charity-campaigns campaign-id
+                        (merge campaign {raised: (+ (get raised campaign) nft-value)}))
+                    
+                    (ok true)
+                )
+            )
         )
     )
 )
