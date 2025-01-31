@@ -89,6 +89,27 @@
     (map-get? user-donations {user: user, campaign-id: campaign-id})
 )
 
+;; Read-only functions for new features
+(define-read-only (get-campaign-nfts (campaign-id uint))
+    (map-get? campaign-nfts campaign-id)
+)
+
+(define-read-only (get-user-campaign-stats (user principal) (campaign-id uint))
+    (map-get? user-campaign-participation {user: user, campaign-id: campaign-id})
+)
+
+(define-read-only (get-campaign-milestone 
+    (campaign-id uint)
+    (milestone-id uint))
+    (map-get? campaign-milestones 
+        {campaign-id: campaign-id, 
+         milestone-id: milestone-id})
+)
+
+(define-read-only (get-user-rewards (user principal))
+    (map-get? user-rewards user)
+)
+
 ;; Private functions
 (define-private (check-owner (token-id uint) (acc uint))
     (if (is-eq (some tx-sender) (map-get? nft-owners token-id))
